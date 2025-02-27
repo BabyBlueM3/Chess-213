@@ -1,7 +1,5 @@
 package chess;
 
-import java.util.ArrayList;
-
 public class Chess {
 
         enum Player { white, black }
@@ -30,9 +28,12 @@ public class Chess {
 	/**
 	 * This method should reset the game, and start from scratch.
 	 */
-	public static void start() {
+	public static void main(String[] args) {
+		
 		/* FILL IN THIS METHOD */
-		initializeBoard();
+		board = new Board();  // Instantiate a new board
+        board.initializeBoard(); // Initialize the pieces on the board
+        board.printBoard(); // Print the board to verify initialization
 	}
 	public static void initializeBoard(){
 

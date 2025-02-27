@@ -9,7 +9,6 @@ public class Piece {
         this.isWhite = isWhite;
     }
 
-    @Override
     public String toString() {
         return (isWhite ? "w" : "b") + type.shortName;
     }

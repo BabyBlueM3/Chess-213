@@ -1,8 +1,5 @@
 package chess;
 
-import chess.Piece;
-import chess.PieceType;
-
 public class Board {
 
     // Define the chessboard as a 2D array of Piece objects
@@ -19,23 +16,23 @@ public class Board {
 
         // Initialize the pieces for both players
         for (int i = 0; i < 8; i++) {
-            board[1][i] = new Piece(PieceType.PAWN, false); // Black pawns
-            board[6][i] = new Piece(PieceType.PAWN, true);  // White pawns
+            board[6][i] = new Piece(PieceType.PAWN, false); // Black pawns
+            board[1][i] = new Piece(PieceType.PAWN, true);  // White pawns
         }
 
         // Black pieces on rank 0
-        board[0][0] = board[0][7] = new Piece(PieceType.ROOK, false);
-        board[0][1] = board[0][6] = new Piece(PieceType.KNIGHT, false);
-        board[0][2] = board[0][5] = new Piece(PieceType.BISHOP, false);
-        board[0][3] = new Piece(PieceType.QUEEN, false);
-        board[0][4] = new Piece(PieceType.KING, false);
+        board[7][0] = board[7][7] = new Piece(PieceType.ROOK, false);
+        board[7][1] = board[7][6] = new Piece(PieceType.KNIGHT, false);
+        board[7][2] = board[7][5] = new Piece(PieceType.BISHOP, false);
+        board[7][3] = new Piece(PieceType.QUEEN, false);
+        board[7][4] = new Piece(PieceType.KING, false);
 
         // White pieces on rank 7
-        board[7][0] = board[7][7] = new Piece(PieceType.ROOK, true);
-        board[7][1] = board[7][6] = new Piece(PieceType.KNIGHT, true);
-        board[7][2] = board[7][5] = new Piece(PieceType.BISHOP, true);
-        board[7][3] = new Piece(PieceType.QUEEN, true);
-        board[7][4] = new Piece(PieceType.KING, true);
+        board[0][0] = board[0][7] = new Piece(PieceType.ROOK, true);
+        board[0][1] = board[0][6] = new Piece(PieceType.KNIGHT, true);
+        board[0][2] = board[0][5] = new Piece(PieceType.BISHOP, true);
+        board[0][3] = new Piece(PieceType.QUEEN, true);
+        board[0][4] = new Piece(PieceType.KING, true);
     }
 
     // Method to print the chessboard
@@ -45,7 +42,12 @@ public class Board {
                 if (board[i][j] != null) {
                     System.out.print(board[i][j].toString() + " ");
                 } else {
-                    System.out.print("## ");
+                    // Print empty space for an empty square
+                    if ((i + j) % 2 == 0) {
+                        System.out.print("   ");  // Empty square
+                    } else {
+                        System.out.print("## ");  // Alternatively, you can use "##"
+                    }
                 }
             }
             System.out.println(i + 1);  // Print the rank number at the end of the row
