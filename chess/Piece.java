@@ -1,6 +1,5 @@
 package chess;
 
-
 public class Piece {
     public PieceType type;
     public boolean isWhite;
