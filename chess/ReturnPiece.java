@@ -11,6 +11,13 @@ class ReturnPiece {
 	public String toString() {
 		return ""+pieceFile+pieceRank+":"+pieceType;
 	}
+
+	public ReturnPiece(PieceType type, PieceFile file, int rank) {
+        this.pieceType = type;
+        this.pieceFile = file;
+        this.pieceRank = rank;
+    }
+
 	public boolean equals(Object other) {
 		if (other == null || !(other instanceof ReturnPiece)) {
 			return false;
