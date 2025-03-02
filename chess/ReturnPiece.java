@@ -8,9 +8,10 @@ class ReturnPiece {
 	PieceType pieceType;
 	PieceFile pieceFile;
 	int pieceRank;  // 1..8
-	public String toString() {
-		return ""+pieceFile+pieceRank+":"+pieceType;
-	}
+	@Override
+    public String toString() {
+        return "" + pieceFile + pieceRank + ":" + pieceType;
+    }
 
 	public ReturnPiece(PieceType type, PieceFile file, int rank) {
         this.pieceType = type;
@@ -18,13 +19,14 @@ class ReturnPiece {
         this.pieceRank = rank;
     }
 
-	public boolean equals(Object other) {
-		if (other == null || !(other instanceof ReturnPiece)) {
-			return false;
-		}
-		ReturnPiece otherPiece = (ReturnPiece)other;
-		return pieceType == otherPiece.pieceType &&
-				pieceFile == otherPiece.pieceFile &&
-				pieceRank == otherPiece.pieceRank;
-	}
+	@Override
+    public boolean equals(Object other) {
+        if (other == null || !(other instanceof ReturnPiece)) {
+            return false;
+        }
+        ReturnPiece otherPiece = (ReturnPiece) other;
+        return pieceType == otherPiece.pieceType &&
+               pieceFile == otherPiece.pieceFile &&
+               pieceRank == otherPiece.pieceRank;
+    }
 }

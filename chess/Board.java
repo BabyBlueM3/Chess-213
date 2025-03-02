@@ -1,147 +1,86 @@
 package chess;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Board {
+    private Piece[][] board;
 
-    private Piece[][] board = new Piece[8][8];
-
-    public void initializeBoard() {
-        for (int i = 0; i < 8; i++) {
-            board[1][i] = new Piece(PieceType.PAWN, true);  // White pawns
-            board[6][i] = new Piece(PieceType.PAWN, false); // Black pawns
-        }
-
-        PieceType[] backRowPieces = {
-            PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.QUEEN,
-            PieceType.KING, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK
-        };
-
-        for (int i = 0; i < 8; i++) {
-            board[0][i] = new Piece(backRowPieces[i], true);  
-            board[7][i] = new Piece(backRowPieces[i], false);
-        }
+    public Board() {
+        board = new Piece[8][8];
     }
 
-    public void printBoard() {
-        for (int i = 7; i >= 0; i--) {  
-            for (int j = 0; j < 8; j++) {  
-                if (board[i][j] != null) {
-                    System.out.print(board[i][j].toString() + " ");
-                } else {
-                    System.out.print(((i + j) % 2 == 0) ? "   " : "## "); 
-                }
+    public void initialize() {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                board[i][j] = null;
             }
-            System.out.println(i + 1);
         }
-        System.out.println(" a  b  c  d  e  f  g  h");
+        // Initialize pieces (simplified)
+        for (int i = 0; i < 8; i++) {
+            board[1][i] = new Piece(PieceType.PAWN, false);
+            board[6][i] = new Piece(PieceType.PAWN, true);
+        }
+        board[0][0] = board[0][7] = new Piece(PieceType.ROOK, false);
+        board[7][0] = board[7][7] = new Piece(PieceType.ROOK, true);
+        board[0][1] = board[0][6] = new Piece(PieceType.KNIGHT, false);
+        board[7][1] = board[7][6] = new Piece(PieceType.KNIGHT, true);
+        board[0][2] = board[0][5] = new Piece(PieceType.BISHOP, false);
+        board[7][2] = board[7][5] = new Piece(PieceType.BISHOP, true);
+        board[0][3] = new Piece(PieceType.QUEEN, false);
+        board[7][3] = new Piece(PieceType.QUEEN, true);
+        board[0][4] = new Piece(PieceType.KING, false);
+        board[7][4] = new Piece(PieceType.KING, true);
     }
 
-    /** ✅ Get a piece at a given position */
-    public Piece getPiece(int x, int y) {
-        if (isOutOfBounds(x, y)) return null;
-        return board[x][y];
-    }
+    public boolean attemptMove(String from, String to, String promote, Chess.Player player) {
+        int[] fromRC = notationToRC(from);
+        int[] toRC = notationToRC(to);
+        if (fromRC == null || toRC == null) return false;
 
-    /** ✅ Move a piece */
-    public void movePiece(int startX, int startY, int endX, int endY) {
-        board[endX][endY] = board[startX][startY]; 
-        board[startX][startY] = null; 
-    }
-
-    /** ✅ Validate move */
-    public boolean isValidMove(int startX, int startY, int endX, int endY, Player currentPlayer) {
-        Piece piece = getPiece(startX, startY);
-        if (piece == null || piece.getPlayer() != currentPlayer) {
+        Piece movingPiece = board[fromRC[0]][fromRC[1]];
+        if (movingPiece == null || movingPiece.isWhite != (player == Chess.Player.white)) {
             return false;
         }
 
-        if (!piece.isValidMove(startX, startY, endX, endY, this)) {
-            return false;
-        }
-
-        if (isPathObstructed(startX, startY, endX, endY, piece.getType())) {
-            return false;
-        }
-
-        Piece destinationPiece = getPiece(endX, endY);
-        if (destinationPiece != null && destinationPiece.getPlayer() == currentPlayer) {
-            return false;
-        }
-
+        board[toRC[0]][toRC[1]] = movingPiece;
+        board[fromRC[0]][fromRC[1]] = null;
         return true;
     }
 
-    /** ✅ Check if path is clear */
-    private boolean isPathObstructed(int startX, int startY, int endX, int endY, PieceType type) {
-        if (type == PieceType.KNIGHT) return false;
-
-        int dx = Integer.compare(endX, startX);
-        int dy = Integer.compare(endY, startY);
-        int x = startX + dx, y = startY + dy;
-
-        while (x != endX || y != endY) {
-            if (getPiece(x, y) != null) return true;
-            x += dx;
-            y += dy;
-        }
-        return false;
+    public boolean isInCheck(Chess.Player player) {
+        return false; // Placeholder logic
     }
 
-    /** ✅ Check if a player is in check */
-    public boolean isCheck(Player player) {
-        int kingX = -1, kingY = -1;
-        
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                Piece piece = getPiece(i, j);
-                if (piece instanceof King && piece.getPlayer() == player) {
-                    kingX = i;
-                    kingY = j;
-                    break;
+    public boolean canMove(Chess.Player player) {
+        return true; // Placeholder logic
+    }
+
+    public List<ReturnPiece> toReturnPieceList() {
+        List<ReturnPiece> pieces = new ArrayList<>();
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if (board[r][c] != null) {
+                    pieces.add(new ReturnPiece(
+                        ReturnPiece.PieceType.valueOf(board[r][c].toString()),  // Convert to PieceType
+                        ReturnPiece.PieceFile.valueOf(rcToNotation(r, c).substring(0,1)),  // Convert file to PieceFile
+                        Integer.parseInt(rcToNotation(r, c).substring(1))  // Convert rank to int
+                    ));
+
                 }
             }
         }
-
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                Piece piece = getPiece(i, j);
-                if (piece != null && piece.getPlayer() != player) {
-                    if (piece.isValidMove(i, j, kingX, kingY, this)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return pieces;
     }
 
-    /** ✅ Check if a player is in checkmate */
-    public boolean isCheckmate(Player player) {
-        if (!isCheck(player)) return false;
-
-        for (int startX = 0; startX < 8; startX++) {
-            for (int startY = 0; startY < 8; startY++) {
-                Piece piece = getPiece(startX, startY);
-                if (piece != null && piece.getPlayer() == player) {
-                    for (int endX = 0; endX < 8; endX++) {
-                        for (int endY = 0; endY < 8; endY++) {
-                            if (isValidMove(startX, startY, endX, endY, player)) {
-                                Piece temp = getPiece(endX, endY);
-                                movePiece(startX, startY, endX, endY);
-                                boolean stillCheck = isCheck(player);
-                                movePiece(endX, endY, startX, startY);
-                                board[endX][endY] = temp;
-                                if (!stillCheck) return false;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return true;
+    private int[] notationToRC(String square) {
+        if (square.length() != 2) return null;
+        int col = square.charAt(0) - 'a';
+        int row = 8 - (square.charAt(1) - '0');
+        return (col >= 0 && col < 8 && row >= 0 && row < 8) ? new int[]{row, col} : null;
     }
 
-    /** ✅ Helper method to check bounds */
-    private boolean isOutOfBounds(int x, int y) {
-        return x < 0 || x >= 8 || y < 0 || y >= 8;
+    private String rcToNotation(int row, int col) {
+        return "" + (char) ('a' + col) + (8 - row);
     }
 }
