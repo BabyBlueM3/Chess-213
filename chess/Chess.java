@@ -1,5 +1,7 @@
 package chess;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -314,46 +316,67 @@ public class Chess {
     }
 
     public static void main(String[] args) {
-    start();
-    Scanner scanner = new Scanner(System.in);
-    
-    while (true) {
-        System.out.println("Current board:");
-		printBoard();
-        
-        System.out.println("Player " + (currentPlayer == Player.white ? "White" : "Black") + "'s turn.");
-        System.out.print("Enter your move (or 'quit' to exit): ");
-        
-        String move = scanner.nextLine().trim();
-        
-        // If the user wants to quit the game
-        if (move.equals("quit")) {
-            System.out.println("Game over. Thanks for playing!");
-            break;
-        }
-        
-        // If the user wants to resign
-        if (move.equals("resign")) {
-            ReturnPlay result = play(move);
-            System.out.println(result.message);  // Print resignation message
-            break;
-        }
+		// Check if a file path is provided as an argument
+		if (args.length < 1) {
+			System.out.println("Please provide a file path with chess moves.");
+			return;
+		}
+	
+		// Read moves from the file
+		String filePath = args[0];
+		File moveFile = new File(filePath);
+	
+		if (!moveFile.exists()) {
+			System.out.println("The specified file does not exist.");
+			return;
+		}
+	
+		try (Scanner fileScanner = new Scanner(moveFile)) {
+			start(); // Initialize the board and set up the game
+	
+			while (fileScanner.hasNextLine()) {
+				String move = fileScanner.nextLine().trim();
+				
+				// Print current board before processing the move
+				System.out.println("Current board state:");
+				printBoard();
+				System.out.println(currentPlayer + "'s turn\n");
+	
+				// Process the move
+				if (move.equals("quit")) {
+					System.out.println("Game over. Thanks for playing!");
+					break;
+				}
+	
+				// If the user wants to resign
+				if (move.equals("resign")) {
+					ReturnPlay result = play(move);
+					System.out.println(result.message);  // Print resignation message
+					break;
+				}
+	
+				if (move.equals("reset")) {
+					start();  // Reset the board and game state
+					System.out.println("Game has been reset.");
+					continue; // Skip the rest of the loop
+				}
+	
+				// Process the move and display the result
+				ReturnPlay result = play(move);
+	
+				if (result.message != null) {
+					System.out.println(result.message); // Print result message (check, checkmate, etc.)
+				}
+	
+				// Print the current board after each move
+				System.out.println("This is the current board output:");
+				printBoard();
+				System.out.println(currentPlayer + "'s turn\n");
+			}
+		} catch (FileNotFoundException e) {
+			System.out.println("Error reading the file: " + e.getMessage());
+		}
+	}
+	
 
-		if (move.equals("reset")) {
-            start();  // Reset the board and game state
-            System.out.println("Game has been reset.");
-            continue; // Skip the rest of the loop
-        }
-		
-
-        // Process the move and display the result
-        ReturnPlay result = play(move);
-        
-        if (result.message != null) {
-            System.out.println(result.message); // Print result message (check, checkmate, etc.)
-        }
-    }
-    
-    scanner.close(); // Close the scanner when the game ends
-}
 }
