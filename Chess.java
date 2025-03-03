@@ -33,33 +33,34 @@ public class Chess {
 		if (parts.length == 2 || (parts.length == 3 && parts[2].equals("draw?"))) {
 			ReturnPiece piece = getPieceAt(parts[0]);
 	
-			if (piece == null || !isCurrentPlayerPiece(piece) || !isValidMove(piece, parts[1])) {
+			if (piece == null || !isCurrentPlayerPiece(piece) || !isValidMove(piece, parts[1]) || isCheck(false)) {
 				result.message = ReturnPlay.Message.ILLEGAL_MOVE;
 				return result;
 			}
 	
 			// Move the piece
 			movePiece(piece, parts[1]);
-	
-			// Check if this move results in checkmate
-			if (isKingCaptured()) {
-				result.message = (currentPlayer == Player.white) ? ReturnPlay.Message.CHECKMATE_WHITE_WINS : ReturnPlay.Message.CHECKMATE_BLACK_WINS;
-				return result;
-			}
-	
+
+			// Switch turn after move
+			switchPlayer();
+
 			// Check if the opponent is in check
-			if (isCheck()) {
-				result.message = ReturnPlay.Message.CHECK;
+			if (isCheck(false)) {
+				// Check if the threatened King has any valid escape moves
+				if (isCheck(true)) {
+					result.message = (currentPlayer == Player.white) ? ReturnPlay.Message.CHECKMATE_WHITE_WINS : ReturnPlay.Message.CHECKMATE_BLACK_WINS;
+				} else {
+					result.message = ReturnPlay.Message.CHECK;
+				}
 				return result;
 			}
-	
+
 			// Handle draw request
 			if (parts.length == 3 && parts[2].equals("draw?")) {
 				result.message = ReturnPlay.Message.DRAW;
 			}
-	
-			// Switch turn after move
-			switchPlayer();
+
+
 			return result;
 		}
 	
@@ -207,23 +208,7 @@ public class Chess {
 		}
 	}
 	
-	
-    
-    private static boolean isKingCaptured() {
-        boolean whiteKingExists = false;
-        boolean blackKingExists = false;
-        
-        for (ReturnPiece piece : board) {
-            if (piece.pieceType == ReturnPiece.PieceType.WK) {
-                whiteKingExists = true;
-            }
-            if (piece.pieceType == ReturnPiece.PieceType.BK) {
-                blackKingExists = true;
-            }
-        }
-        return !whiteKingExists || !blackKingExists;
-    }
-    
+
     private static void movePiece(ReturnPiece piece, String destination) {
         char newFile = destination.charAt(0);
         int newRank = Character.getNumericValue(destination.charAt(1));
@@ -231,9 +216,9 @@ public class Chess {
         board.remove(piece);
         board.add(new ReturnPiece(piece.pieceType, ReturnPiece.PieceFile.values()[newFile - 'a'], newRank));
     }
-    
-    private static boolean isCheck() {
-		// Find the current player's king position
+
+    private static boolean isCheck(boolean isMate) {
+		// Find the king's position
 		ReturnPiece.PieceType kingType = (currentPlayer == Player.white) ? ReturnPiece.PieceType.WK : ReturnPiece.PieceType.BK;
 		ReturnPiece king = null;
 		
@@ -248,14 +233,52 @@ public class Chess {
 		if (king == null) {
 			return false;
 		}
-	
-		// Check if any opponent piece can attack the king's position
-		for (ReturnPiece piece : board) {
-			if (piece.pieceType.toString().charAt(0) != kingType.toString().charAt(0) && isValidMove(piece, king.pieceFile.toString() + king.pieceRank)) {
-				return true;  // The king is in check
+
+
+		if(isMate) { // Check if king has any legal moves by moving it to every possible position and seeing if its in check.
+			String destination = "";
+			for (int f = -1; f <= 1; f++) { // f for File
+				for (int r = -1; r <= 1; r++) { // r for Rank
+					switch (r) {
+						case -1: // Check the left edge
+							if (king.toString().charAt(0) != 'a') { // Check if king is on the left edge
+								destination = "" + (king.toString().charAt(0) - 'a') + (Character.getNumericValue(king.toString().charAt(1)) + r);
+							}
+							break;
+						case 1: // Check the right edge
+							if (king.toString().charAt(0) != 'h') { // Check if king is on the right edge
+								destination = "" + (king.toString().charAt(0) + 'a') + (Character.getNumericValue(king.toString().charAt(1)) + r);
+							}
+							break;
+						default:
+							destination = "" + king.toString().charAt(0) + (Character.getNumericValue(king.toString().charAt(1)) + r);
+							break;
+					}
+					if(isValidMove(king, destination)) { // If the king is able to survive at least one potential move, it is not in checkmate
+						boolean isSafe = true;
+						for (ReturnPiece piece : board) {
+							if (piece.pieceType.toString().charAt(0) != kingType.toString().charAt(0) && isValidMove(piece, destination)) {
+								isSafe = false;
+								break;  // The king is in check so check it's next position
+							}
+						}
+						if(isSafe) {
+							return false; // The king is NOT in checkmate
+						}
+					}
+					destination = null;
+				}
+			}
+			return true; // No legal moves, so the king is in checkmate
+
+
+		} else { // Check if any opponent piece can attack the king's position
+			for (ReturnPiece piece : board) {
+				if (piece.pieceType.toString().charAt(0) != kingType.toString().charAt(0) && isValidMove(piece, king.pieceFile.toString() + king.pieceRank)) {
+					return true;  // The king is in check
+				}
 			}
 		}
-	
 		return false; // No threats to the king
 	}
 	
