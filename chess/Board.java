@@ -1,5 +1,7 @@
 package chess;
 
+import chess.ReturnPlay;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,22 +58,6 @@ public class Board {
         return true; // Placeholder logic
     }
 
-    public List<ReturnPiece> toReturnPieceList() {
-        List<ReturnPiece> pieces = new ArrayList<>();
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                if (board[r][c] != null) {
-                    pieces.add(new ReturnPiece(
-                        ReturnPiece.PieceType.valueOf(board[r][c].toString()),  // Convert to PieceType
-                        ReturnPiece.PieceFile.valueOf(rcToNotation(r, c).substring(0,1)),  // Convert file to PieceFile
-                        Integer.parseInt(rcToNotation(r, c).substring(1))  // Convert rank to int
-                    ));
-
-                }
-            }
-        }
-        return pieces;
-    }
 
     private int[] notationToRC(String square) {
         if (square.length() != 2) return null;

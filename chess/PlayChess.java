@@ -9,7 +9,7 @@ public class PlayChess {
 		// TODO Auto-generated method stub
 		Scanner sc = new Scanner(System.in);
 		Chess.start();
-		
+
 		String line = sc.nextLine();
 		while (!line.equals("quit")) {
 			if (line.equals("reset")) {
@@ -20,24 +20,24 @@ public class PlayChess {
 			}
 			// move 
 			ReturnPlay res = Chess.play(line);
-			
+
 			// print result message
 			if (res.message != null) {
 				System.out.println("\n"+res.message);
 			}
 			System.out.println();
-			
+
 			// print result board
 			printBoard(res.piecesOnBoard);
 			System.out.println();
-			
+
 			// next line
 			line = sc.nextLine();
 		}
-		
+
 		sc.close();
 	}
-	
+
 	static void printBoard(ArrayList<ReturnPiece> pieces) {
 		String[][] board = makeBlankBoard();
 		if (pieces != null) {
@@ -46,12 +46,12 @@ public class PlayChess {
 		for (int r=0; r < 8; r++) {
 			for (int c=0; c < 8; c++) {
 				System.out.print(board[r][c] + " ");
-			}	
+			}
 			System.out.println((8-r));
 		}
 		System.out.println(" a  b  c  d  e  f  g  h");
 	}
-	
+
 	static String[][] makeBlankBoard() {
 		String[][] board = new String[8][8];
 		for (int r=0; r < 8; r++) {
@@ -65,7 +65,7 @@ public class PlayChess {
 		}
 		return board;
 	}
-	
+
 	static void printPiecesOnBoard(
 			ArrayList<ReturnPiece> pieces, String[][] board) {
 		for (ReturnPiece rp: pieces) {
@@ -75,7 +75,7 @@ public class PlayChess {
 			ppstr += Character.toLowerCase(pieceStr.charAt(0));
 			ppstr += pieceStr.charAt(1) == 'P' ? 'p' : pieceStr.charAt(1);
 			board[8-rp.pieceRank][file] = ppstr;
-		}	
+		}
 	}
-	
+
 }
