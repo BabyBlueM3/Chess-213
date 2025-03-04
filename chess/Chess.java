@@ -10,6 +10,7 @@ public class Chess {
     enum Player { white, black }
     private static Player currentPlayer;
     private static ArrayList<ReturnPiece> board;
+	private static ReturnPiece enPassant = null; // If a pawn is ever moved from the start row, record it so the next move can check for an En Passant
 
     /**
      * Plays the next move for whichever player has the turn.
@@ -166,18 +167,38 @@ public class Chess {
 					return true; // Normal move forward
 				}
 				if (fileDiff == 0 && piece.pieceRank == 2 && destRank == 4 && targetPiece == null) {
+					System.out.println(currentPlayer + " double moved pawn: " + piece); //								debug
+					enPassant = piece;
 					return true; // Double move from starting position
 				}
-				if (fileDiff == 1 && destRank == piece.pieceRank + 1 && isCapturing) {
-					return true; // Capturing diagonally
+				if (fileDiff == 1 && destRank == piece.pieceRank + 1) {
+					System.out.println(currentPlayer + " diagonal capture with pawn: " + piece); //								debug
+					if (enPassant != null) {
+						enPassant = null;
+						System.out.println("\n\n en passant!!!!!!!!\n\n"); //							debug
+						return true; // En Passant capture
+					}
+					return isCapturing; // Capturing diagonally
 				}
+
 				return false;
 			case BP: // Black Pawn
 				if (fileDiff == 0 && destRank == piece.pieceRank - 1 && targetPiece == null) {
 					return true; // Normal move forward
 				}
 				if (fileDiff == 0 && piece.pieceRank == 7 && destRank == 5 && targetPiece == null) {
+					System.out.println(currentPlayer + " double moved pawn: " + piece); //								debug
+					enPassant = piece;
 					return true; // Double move from starting position
+				}
+				if (fileDiff == 1 && destRank == piece.pieceRank - 1) {
+					System.out.println(currentPlayer + " diagonal capture with pawn: " + piece); //								debug
+					if (enPassant != null) {
+						enPassant = null;
+						System.out.println("\n\n en passant!!!!!!!!\n\n"); //							debug
+						return true; // En Passant capture
+					}
+					return isCapturing; // Capturing diagonally
 				}
 				if (fileDiff == 1 && destRank == piece.pieceRank - 1 && isCapturing) {
 					return true; // Capturing diagonally
@@ -214,7 +235,7 @@ public class Chess {
     private static void movePiece(ReturnPiece piece, String destination) {
         char newFile = destination.charAt(0);
         int newRank = Character.getNumericValue(destination.charAt(1));
-        
+
         board.remove(piece);
         board.add(new ReturnPiece(piece.pieceType, ReturnPiece.PieceFile.values()[newFile - 'a'], newRank));
     }
