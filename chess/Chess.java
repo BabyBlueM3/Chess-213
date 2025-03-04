@@ -230,15 +230,24 @@ public class Chess {
 				return false;
 		}
 	}
-	
 
-    private static void movePiece(ReturnPiece piece, String destination) {
-        char newFile = destination.charAt(0);
-        int newRank = Character.getNumericValue(destination.charAt(1));
 
-        board.remove(piece);
-        board.add(new ReturnPiece(piece.pieceType, ReturnPiece.PieceFile.values()[newFile - 'a'], newRank));
-    }
+	private static void movePiece(ReturnPiece piece, String destination) {
+		char newFile = destination.charAt(0);
+		int newRank = Character.getNumericValue(destination.charAt(1));
+
+		// Remove the opponent's piece if it exists at the destination
+		ReturnPiece targetPiece = getPieceAt(destination);
+		if (targetPiece != null && !isCurrentPlayerPiece(targetPiece)) {
+			board.remove(targetPiece);
+		}
+
+		// Remove the moving piece from its current position
+		board.remove(piece);
+
+		// Add the piece to the new position
+		board.add(new ReturnPiece(piece.pieceType, ReturnPiece.PieceFile.values()[newFile - 'a'], newRank));
+	}
 
     private static boolean isCheck(boolean isMate) {
 		// Find the king's position
