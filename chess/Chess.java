@@ -12,43 +12,48 @@ import java.util.Scanner;
 
 public class Chess {
 
-    enum Player { white, black }
-    private static Player currentPlayer;
-    private static ArrayList<ReturnPiece> board;
+	enum Player {white, black}
+
+	private static Player currentPlayer;
+	private static ArrayList<ReturnPiece> board;
 	private static ReturnPiece enPassant = null; // If a pawn is ever moved from the start row, record it so the next move can check for an En Passant
+	private static boolean recentDoubleMove = false;
 	private static boolean canWhiteCastleQueen = true;
 	private static boolean canWhiteCastleKing = true;
 	private static boolean canBlackCastleKing = true;
 	private static boolean canBlackCastleQueen = true;
-    /**
-     * Plays the next move for whichever player has the turn.
-     *
-     * @param move String for the next move, e.g., "a2 a3"
-     * @return A ReturnPlay instance that contains the result of the move.
-     */
-    public static ReturnPlay play(String move) {
+
+
+	/**
+	 * Plays the next move for whichever player has the turn.
+	 *
+	 * @param move String for the next move, e.g., "a2 a3"
+	 * @return A ReturnPlay instance that contains the result of the move.
+	 */
+	public static ReturnPlay play(String move) {
 		move = move.trim();
 		String[] parts = move.split(" ");
 		ReturnPlay result = new ReturnPlay();
-		result.piecesOnBoard = new ArrayList<>(board);
-		result.message = null;
-	
+		boolean isIllegalMove = false;
+
+		System.out.println(currentPlayer + "'s turn : " + parts[0] + " to " + parts[1]);
 		if (move.equals("resign")) {
 			result.message = (currentPlayer == Player.white) ? ReturnPlay.Message.RESIGN_BLACK_WINS : ReturnPlay.Message.RESIGN_WHITE_WINS;
-			return result;
 		}
-	
-	
-		if (parts.length == 2 || (parts.length == 3 && (parts[2].equals("draw?")) || parts[2].length() == 1)) {
+
+
+		else if (parts.length == 2 || (parts.length == 3 && (parts[2].equals("draw?")) || parts[2].length() == 1)) {
 			ReturnPiece piece = getPieceAt(parts[0]);
-	
+
 			if (piece == null || !isCurrentPlayerPiece(piece) || !isValidMove(piece, parts[1], false)) {
+				//System.out.println("first illegal move"); //debug
+				//System.out.println("piece == null = "  + (piece == null) + "\n!isCurrentPlayerPiece(piece) = " + (!isCurrentPlayerPiece(piece)) + "\n!isValidMove(piece, parts[1], false) = " + (!isValidMove(piece, parts[1], false)));
 				result.message = ReturnPlay.Message.ILLEGAL_MOVE;
-				return result;
+				isIllegalMove = true;
 			}
 
 			// check if move will put moved king in check
-			if (piece.pieceType.toString().charAt(1) == 'K') {
+			else if (piece.pieceType.toString().charAt(1) == 'K') {
 				char newFile = parts[1].charAt(0);
 				int newRank = Character.getNumericValue(parts[1].charAt(1));
 
@@ -60,17 +65,14 @@ public class Chess {
 				king.pieceRank = newRank;
 
 				if (isCheck(king)) {
+					isIllegalMove = true;
 					result.message = ReturnPlay.Message.ILLEGAL_MOVE;
-					return result;
 				}
 			}
 
 
-
-
-
 			// Handle promotion
-			if (parts.length == 3 && parts[2].length() == 1) {
+			else if (parts.length == 3 && parts[2].length() == 1) {
 				ReturnPiece tempPiece = new ReturnPiece();
 
 				switch (parts[2]) {
@@ -100,16 +102,18 @@ public class Chess {
 				}
 				tempPiece.pieceFile = piece.pieceFile;
 				tempPiece.pieceRank = piece.pieceRank;
-				movePiece(tempPiece, parts[1]);
+				movePiece(tempPiece, parts[1], true);
 				board.remove(piece);
 			} else {
 				// Move the piece
-				movePiece(piece, parts[1]);
+				movePiece(piece, parts[1], true);
 			}
 
-
+			if(!isIllegalMove) {
 				// Switch turn after move
-			switchPlayer();
+				switchPlayer();
+			}
+
 
 			// Check if the opponent is in check
 			ReturnPiece king = findKing();
@@ -120,7 +124,6 @@ public class Chess {
 				} else {
 					result.message = ReturnPlay.Message.CHECK;
 				}
-				return result;
 			}
 
 			// Handle draw request
@@ -129,18 +132,20 @@ public class Chess {
 			}
 
 
-			return result;
 		}
-	
-		result.message = ReturnPlay.Message.ILLEGAL_MOVE;
+		else {
+			System.out.println("else illegal move");
+			result.message = ReturnPlay.Message.ILLEGAL_MOVE;
+		}
+		result.piecesOnBoard = new ArrayList<>(board);
 		return result;
 	}
 
-    private static void initializeBoard() {
-        String[] pieceOrder = {"R", "N", "B", "Q", "K", "B", "N", "R"};
+	private static void initializeBoard() {
+		String[] pieceOrder = {"R", "N", "B", "Q", "K", "B", "N", "R"};
 		String[] fileOrder = {"a", "b", "c", "d", "e", "f", "g", "h"};
 		ReturnPiece tempPiece = new ReturnPiece();
-        for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 8; i++) {
 
 			ReturnPiece tempWP = new ReturnPiece();
 			ReturnPiece tempBP = new ReturnPiece();
@@ -232,31 +237,31 @@ public class Chess {
 			board.add(tempBP);
 			board.add(tempW);
 			board.add(tempB);
-        }
-    }
+		}
+	}
 
-    private static ReturnPiece getPieceAt(String position) {
-        char file = position.charAt(0);
-        int rank = Character.getNumericValue(position.charAt(1));
-        for (ReturnPiece piece : board) {
-            if (piece.pieceFile.toString().charAt(0) == file && piece.pieceRank == rank) {
-                return piece;
-            }
-        }
-        return null;
-    }
-    
-    private static boolean isCurrentPlayerPiece(ReturnPiece piece) {
-        return (currentPlayer == Player.white && piece.pieceType.toString().startsWith("W")) ||
-               (currentPlayer == Player.black && piece.pieceType.toString().startsWith("B"));
-    }
+	private static ReturnPiece getPieceAt(String position) {
+		char file = position.charAt(0);
+		int rank = Character.getNumericValue(position.charAt(1));
+		for (ReturnPiece piece : board) {
+			if (piece.pieceFile.toString().charAt(0) == file && piece.pieceRank == rank) {
+				return piece;
+			}
+		}
+		return null;
+	}
+
+	private static boolean isCurrentPlayerPiece(ReturnPiece piece) {
+		return (currentPlayer == Player.white && piece.pieceType.toString().startsWith("W")) ||
+				(currentPlayer == Player.black && piece.pieceType.toString().startsWith("B"));
+	}
 
 	private static boolean isPathClear(ReturnPiece piece, String destination, boolean isVertical) {
 		int startFile = piece.pieceFile.ordinal();
 		int startRank = piece.pieceRank;
 		int destFile = destination.charAt(0) - 'a';
 		int destRank = Character.getNumericValue(destination.charAt(1));
-	
+
 		if (isVertical) { // Moving vertically along the same file
 			int minRank = Math.min(startRank, destRank);
 			int maxRank = Math.max(startRank, destRank);
@@ -274,7 +279,7 @@ public class Chess {
 				}
 			}
 		}
-	
+
 		return true; // No pieces blocking the path
 	}
 
@@ -283,14 +288,14 @@ public class Chess {
 		int startRank = piece.pieceRank;
 		int destFile = destination.charAt(0) - 'a';
 		int destRank = Character.getNumericValue(destination.charAt(1));
-	
+
 		if (Math.abs(destFile - startFile) != Math.abs(destRank - startRank)) {
 			return false; // Not moving diagonally
 		}
-	
+
 		int fileStep = (destFile > startFile) ? 1 : -1;
 		int rankStep = (destRank > startRank) ? 1 : -1;
-	
+
 		int file = startFile + fileStep;
 		int rank = startRank + rankStep;
 		while (file != destFile && rank != destRank) {
@@ -300,63 +305,80 @@ public class Chess {
 			file += fileStep;
 			rank += rankStep;
 		}
-	
-		return true;
-	}	
-	
 
-    private static boolean isValidMove(ReturnPiece piece, String destination, boolean isCapturingKing) { //since taking the king is technically an illegal move im gonna add this isCapturingKing to ignore that when checking for a check
+		return true;
+	}
+
+
+	private static boolean isValidMove(ReturnPiece piece, String destination, boolean isCapturingKing) { //since taking the king is technically an illegal move im gonna add this isCapturingKing to ignore that when checking for a check
 		int destFile = destination.charAt(0) - 'a';
 		int destRank = Character.getNumericValue(destination.charAt(1));
 		int fileDiff = Math.abs(destFile - piece.pieceFile.ordinal());
 		int rankDiff = Math.abs(destRank - piece.pieceRank);
-	
+
 		ReturnPiece targetPiece = getPieceAt(destination);
 		boolean isCapturing = targetPiece != null && !isCurrentPlayerPiece(targetPiece) || isCapturingKing;
-
+		//System.out.println("piece sent to isValidMove = " + piece); //debug
 
 		switch (piece.pieceType) {
 			case WP: // White Pawn
 				if (fileDiff == 0 && destRank == piece.pieceRank + 1 && targetPiece == null) {
 					return true; // Normal move forward
 				}
-				if (fileDiff == 0 && piece.pieceRank == 2 && destRank == 4 && targetPiece == null) {
-//					System.out.println(currentPlayer + " double moved pawn: " + piece); //								debug
-					return true; // Double move from starting position
-				}
-				if (fileDiff == 1 && destRank == piece.pieceRank + 1) {
+				if (fileDiff == 1 && destRank == piece.pieceRank + 1 && recentDoubleMove) {
 //					System.out.println(currentPlayer + " diagonal capture with pawn: " + piece); //								debug
-					if (enPassant != null) {
+					if (enPassant != null && enPassant.pieceFile.ordinal() == destFile) {
+						board.remove(getPieceAt(destination.substring(0, 1) + (destRank - 1)));
 						enPassant = null;
 //						System.out.println("\n\n en passant!!!!!!!!\n\n"); //							debug
 						return true; // En Passant capture
 					}
-					return isCapturing; // Capturing diagonally
+					return false;
 				}
-
+				if (fileDiff == 1 && destRank == piece.pieceRank + 1 && isCapturing) {
+//					System.out.println(currentPlayer + " diagonal capture with pawn: " + piece); //								debug
+					return true; // Capturing diagonally
+				}
+				if (fileDiff == 0 && piece.pieceRank == 2 && destRank == 4 && targetPiece == null) {
+//					System.out.println(currentPlayer + " double moved pawn: " + piece); //								debug
+					enPassant = piece;
+					recentDoubleMove = true;
+					return true; // Double move from starting position
+				}
 				return false;
 			case BP: // Black Pawn
 				if (fileDiff == 0 && destRank == piece.pieceRank - 1 && targetPiece == null) {
 					return true; // Normal move forward
 				}
-				if (fileDiff == 0 && piece.pieceRank == 7 && destRank == 5 && targetPiece == null) {
-//					System.out.println(currentPlayer + " double moved pawn: " + piece); //								debug
-					return true; // Double move from starting position
-				}
-				if (fileDiff == 1 && destRank == piece.pieceRank - 1) {
+				if (recentDoubleMove && fileDiff == 1 && destRank == piece.pieceRank - 1) {
 //					System.out.println(currentPlayer + " diagonal capture with pawn: " + piece); //								debug
-					if (enPassant != null) {
-						enPassant = null;
+					if (enPassant != null && enPassant.pieceFile.ordinal() == destFile) {
 //						System.out.println("\n\n en passant!!!!!!!!\n\n"); //							debug
+						board.remove(getPieceAt(destination.substring(0, 1) + (destRank + 1)));
+						enPassant = null;
 						return true; // En Passant capture
 					}
-					return isCapturing; // Capturing diagonally
+					return false; // Capturing diagonally
 				}
 				if (fileDiff == 1 && destRank == piece.pieceRank - 1 && isCapturing) {
+//					System.out.println(currentPlayer + " diagonal capture with pawn: " + piece); //								debug
+
 					return true; // Capturing diagonally
 				}
+				if (fileDiff == 0 && piece.pieceRank == 7 && destRank == 5 && targetPiece == null) {
+//					System.out.println(currentPlayer + " double moved pawn: " + piece); //								debug
+					enPassant = piece;
+					return true; // Double move from starting position
+				}
 				return false;
-			case WR: case BR: // Rook
+			case WR:
+				if (fileDiff == 0) { // Moving vertically
+					return isPathClear(piece, destination, true) && (targetPiece == null || isCapturing);
+				}
+				if (rankDiff == 0) { // Moving horizontally
+					return isPathClear(piece, destination, false) && (targetPiece == null || isCapturing);
+				}
+			case BR: // Rook
 				if (fileDiff == 0) { // Moving vertically
 					return isPathClear(piece, destination, true) && (targetPiece == null || isCapturing);
 				}
@@ -364,11 +386,14 @@ public class Chess {
 					return isPathClear(piece, destination, false) && (targetPiece == null || isCapturing);
 				}
 				return false;
-			case WN: case BN: // Knight
+			case WN:
+			case BN: // Knight
 				return (fileDiff == 2 && rankDiff == 1) || (fileDiff == 1 && rankDiff == 2);
-			case WB: case BB: // Bishop
+			case WB:
+			case BB: // Bishop
 				return (fileDiff == rankDiff) && isPathDiagonalClear(piece, destination) && (targetPiece == null || isCapturing);
-			case WQ: case BQ: // Queen
+			case WQ:
+			case BQ: // Queen
 				if (fileDiff == rankDiff) { // Moving diagonally
 					return isPathDiagonalClear(piece, destination) && (targetPiece == null || isCapturing);
 				}
@@ -377,20 +402,29 @@ public class Chess {
 				}
 				return false;
 			case WK:
-				if(canWhiteCastleQueen && destination.equalsIgnoreCase("c1")) {
+				// check for castle
+				if (canWhiteCastleQueen && destination.equalsIgnoreCase("c1")) {
 					return isPathClear(piece, "b1", false); // The white king is able to castle queenside
+
 				}
-				if(canWhiteCastleKing && destination.equalsIgnoreCase("g1")) {
+				if (canWhiteCastleKing && destination.equalsIgnoreCase("g1")) {
 					return isPathClear(piece, "g1", false); // The white king is able to castle queenside
 				}
+
+
+
+
+
+
 				return fileDiff <= 1 && rankDiff <= 1 && (targetPiece == null || isCapturing);
 			case BK: // King
-				if(canBlackCastleQueen && destination.equalsIgnoreCase("c8")) {
+				if (canBlackCastleQueen && destination.equalsIgnoreCase("c8")) {
 					return isPathClear(piece, "b8", false); // The black king is able to castle queenside
 				}
-				if(canBlackCastleKing && destination.equalsIgnoreCase("g8")) {
+				if (canBlackCastleKing && destination.equalsIgnoreCase("g8")) {
 					return isPathClear(piece, "g8", false); // The black king is able to castle queenside
 				}
+
 				return fileDiff <= 1 && rankDiff <= 1 && (targetPiece == null || isCapturing);
 			default:
 				return false;
@@ -398,75 +432,93 @@ public class Chess {
 	}
 
 
-	private static void movePiece(ReturnPiece piece, String destination) {
+	private static void movePiece(ReturnPiece piece, String destination, boolean isRookCastleException) {
 		char destFile = destination.charAt(0);
 		int destRank = Character.getNumericValue(destination.charAt(1));
 		int fileDiff = Math.abs(destFile - piece.pieceFile.ordinal());
-		int rankDiff = Math.abs(destRank - piece.pieceRank);
+
+
+
+		//check for special cases
+		System.out.println("piecetype = " + piece.pieceType);
+		switch (piece.pieceType) {
+			case WR:
+				//disable white castling on the side of the rook (either a or h)
+				if (isRookCastleException && canWhiteCastleQueen && piece.toString().charAt(0) - 'a' == 0) {
+					canWhiteCastleQueen = false;
+				}
+				if (isRookCastleException && canWhiteCastleKing && piece.toString().charAt(0) - 'a' == 7) {
+					canWhiteCastleKing = false;
+				}
+				break;
+			case BR: // Rook
+				//disable black castling on the side of the rook
+				if (isRookCastleException && canBlackCastleKing && piece.toString().charAt(0) - 'a' == 0) {
+					canBlackCastleKing = false;
+				}
+				if (isRookCastleException && canBlackCastleQueen && piece.toString().charAt(0) - 'a' == 7) {
+					canBlackCastleQueen = false;
+				}
+				break;
+			case WK:
+				if (canWhiteCastleQueen && destination.equals("c1")) {
+					// Move the rook for the castle
+					ReturnPiece rook = getPieceAt("a1");
+					board.remove(rook);
+					ReturnPiece tempRook = new ReturnPiece();
+					tempRook.pieceType = ReturnPiece.PieceType.WR;
+					tempRook.pieceFile = ReturnPiece.PieceFile.valueOf("c");
+					tempRook.pieceRank = destRank;
+					board.add(tempRook);
+				}
+				System.out.println("canWhiteCastleKing = " + canWhiteCastleKing + "\ndestination.equals(\"g1\") = " + destination.equals("g1"));
+				if (canWhiteCastleKing && destination.equals("g1")) {
+					System.out.println("castle successful");
+					// Move the rook for the castle
+					ReturnPiece rook = getPieceAt("h1");
+					board.remove(rook);
+					ReturnPiece tempRook = new ReturnPiece();
+					tempRook.pieceType = ReturnPiece.PieceType.WR;
+					tempRook.pieceFile = ReturnPiece.PieceFile.valueOf("f");
+					tempRook.pieceRank = destRank;
+					board.add(tempRook);
+				}
+				//disable white castling
+				canWhiteCastleQueen = false;
+				canWhiteCastleKing = false;
+			case BK: // King
+				// check for castle
+				if (canBlackCastleQueen && destination.equals("c8")) {
+					// Move the rook for the castle
+					ReturnPiece rook = getPieceAt("a8");
+					board.remove(rook);
+					ReturnPiece tempRook = new ReturnPiece();
+					tempRook.pieceType = ReturnPiece.PieceType.WR;
+					tempRook.pieceFile = ReturnPiece.PieceFile.valueOf("c");
+					tempRook.pieceRank = destRank;
+					board.add(tempRook);
+				}
+				if (canBlackCastleKing && destination.equals("g8")) {
+					// Move the rook for the castle
+					ReturnPiece rook = getPieceAt("h8");
+					board.remove(rook);
+					ReturnPiece tempRook = new ReturnPiece();
+					tempRook.pieceType = ReturnPiece.PieceType.WR;
+					tempRook.pieceFile = ReturnPiece.PieceFile.valueOf("f");
+					tempRook.pieceRank = destRank;
+					board.add(tempRook);
+				}
+				canBlackCastleQueen = false;
+				canBlackCastleKing = false;
+
+				break;
+		}
 
 		// Remove the opponent's piece if it exists at the destination
 		ReturnPiece targetPiece = getPieceAt(destination);
 		if (targetPiece != null && !isCurrentPlayerPiece(targetPiece)) {
 			board.remove(targetPiece);
 		}
-
-		//check for special cases
-		switch (piece.pieceType) {
-			case WP: // White Pawn
-				if (fileDiff == 0 && piece.pieceRank == 2 && destRank == 4 && targetPiece == null) {
-					enPassant = piece;
-				}
-				break;
-			case BP: // Black Pawn
-				if (fileDiff == 0 && piece.pieceRank == 7 && destRank == 5 && targetPiece == null) {
-					enPassant = piece;
-				}
-				break;
-			case WR: // White Rook
-				//disable white castling on the side of the rook (either a or h)
-				if (canWhiteCastleQueen && piece.toString().charAt(0) - 'a' == 0) {
-					canWhiteCastleQueen = false;
-				}
-				if (canWhiteCastleKing && piece.toString().charAt(0) - 'a' == 7) {
-					canWhiteCastleKing = false;
-				}
-				break;
-			case BR: // Black Rook
-				//disable black castling on the side of the rook
-				if (canBlackCastleKing && piece.toString().charAt(0) - 'a' == 0) {
-					canBlackCastleKing = false;
-				}
-				if (canBlackCastleQueen && piece.toString().charAt(0) - 'a' == 7) {
-					canBlackCastleQueen = false;
-				}
-				break;
-			case WK: case BK: // King
-				// check for castle
-				if (canWhiteCastleQueen && destination.charAt(0) == 'c'
-						|| canWhiteCastleKing && destination.charAt(0) == 'g'
-						|| canBlackCastleQueen && destination.charAt(0) == 'c'
-						|| canBlackCastleKing && destination.charAt(0) == 'g') {
-
-					// Move the rook for the castle (was gonna make it recursive but its a headache and a half because piece is null)
-					ReturnPiece rook = getPieceAt("" + (destination.charAt(0) == 'c' ? 'a' : 'h') + destRank);
-					board.remove(rook);
-					ReturnPiece tempRook = new ReturnPiece();
-					tempRook.pieceType = currentPlayer == Player.white ? ReturnPiece.PieceType.WR : ReturnPiece.PieceType.BR;
-					tempRook.pieceFile = ReturnPiece.PieceFile.valueOf("" + (destination.charAt(0) == 'c' ? 'c' : 'f'));
-					tempRook.pieceRank = destRank;
-					board.add(tempRook);
-				}
-
-				if(currentPlayer == Player.white) { //disable white castling
-					canWhiteCastleQueen = false;
-					canWhiteCastleKing = false;
-				} else {//disable black castling
-					canBlackCastleKing = false;
-					canBlackCastleQueen = false;
-				}
-				break;
-		}
-
 
 		// Remove the moving piece from its current position
 		board.remove(piece);
@@ -478,18 +530,8 @@ public class Chess {
 		temp.pieceRank = destRank;
 		board.add(temp);
 
-
-
-
-/*		if (piece.pieceType == ReturnPiece.PieceType.WK || piece.pieceType == ReturnPiece.PieceType.BK) {
-			// If it's a king, update the castling rights
-			updateCastlingRights(piece.pieceType == ReturnPiece.PieceType.WK ? "K" : "k", startRow, startCol);
-		}
-		else if (piece.pieceType == ReturnPiece.PieceType.WR || piece.pieceType == ReturnPiece.PieceType.BR) {
-			// If it's a rook, update the castling rights
-			updateCastlingRights(piece.pieceType == ReturnPiece.PieceType.WR ? "R" : "r", startRow, startCol);
-		}*/
 	}
+
 
 	private static ReturnPiece findKing() {
 		// Find the king's position
@@ -579,91 +621,6 @@ public class Chess {
 		return false; // No threats to the king
 	}
 
-	/*public void updateCastlingRights(String piece, int startRow, int startCol) {
-		switch (piece) {
-			case "K": // White King moves
-				whiteKingMoved = true;
-				break;
-			case "k": // Black King moves
-				blackKingMoved = true;
-				break;
-			case "R": // White Rook moves
-				if (startRow == 0 && startCol == 0) canWhiteCastleQueen; // Queenside (a1)
-				if (startRow == 0 && startCol == 7)  = true; // Kingside (h1)
-				break;
-			case "r": // Black Rook moves
-				if (startRow == 7 && startCol == 0) blackRookMoved[0] = true; // Queenside (a8)
-				if (startRow == 7 && startCol == 7) blackRookMoved[1] = true; // Kingside (h8)
-				break;
-			default:
-				break; // Do nothing for other pieces
-		}
-	}*/
-
-	/*private static void executeCastling(ReturnPiece king, String destination) {
-		// Determine rank based on piece color
-		int rank = (king.pieceType == ReturnPiece.PieceType.WK) ? 1 : 8;
-
-		// --- Validate Castling Path ---
-		// Check the path between the king and the rook to ensure it's clear
-		// For kingside castling, check if the squares between king and rook are clear (f1/h1)
-		if (destination.equals("g" + rank)) { // Kingside castling
-			// Check if path between king and rook is clear
-			if (!isPathClear(king, "f" + rank, false)) { // Horizontal check between e1 and f1
-				System.out.println("Path is not clear for kingside castling.");
-				return;
-			}
-		} else if (destination.equals("c" + rank)) { // Queenside castling
-			// Check if path between king and rook is clear
-			if (!isPathClear(king, "d" + rank, false)) { // Horizontal check between e1 and d1
-				System.out.println("Path is not clear for queenside castling.");
-				return;
-			}
-		}
-
-		// --- Move the King ---
-		// Remove the king from its current position
-		board.remove(king);
-		// Calculate destination: e.g., "g1" for white kingside
-		char kingDestFile = destination.charAt(0);
-		int kingDestRank = Character.getNumericValue(destination.charAt(1));
-		// Add the king at the new position
-		ReturnPiece temp = new ReturnPiece();
-		temp.pieceType = king.pieceType;
-		temp.pieceFile = ReturnPiece.PieceFile.values()[kingDestFile - 'a'];
-		temp.pieceRank = kingDestRank;
-		board.add(temp);
-
-
-		// --- Move the Rook ---
-		if (destination.equals("g" + rank)) {  // Kingside castling
-			// The rook moves from h1/h8 to f1/f8
-			ReturnPiece rook = getPieceAt("h" + rank);
-			if (rook != null) {
-				board.remove(rook);
-				// 'f' is the destination file for the rook
-
-				temp.pieceType = rook.pieceType;
-				temp.pieceFile = ReturnPiece.PieceFile.values()['f' - 'a'];
-				temp.pieceRank = rank;
-				board.add(temp);
-			}
-		} else if (destination.equals("c" + rank)) {  // Queenside castling
-			// The rook moves from a1/a8 to d1/d8
-			ReturnPiece rook = getPieceAt("a" + rank);
-			if (rook != null) {
-				board.remove(rook);
-				// 'd' is the destination file for the rook
-				temp.pieceType = rook.pieceType;
-				temp.pieceFile = ReturnPiece.PieceFile.values()['d' - 'a'];
-				temp.pieceRank = rank;
-				board.add(temp);
-
-			}
-		}
-	}*/
-
-
     private static void switchPlayer() {
         currentPlayer = (currentPlayer == Player.white) ? Player.black : Player.white;
     }
@@ -716,72 +673,9 @@ public class Chess {
         board = new ArrayList<>();
         currentPlayer = Player.white;
         initializeBoard();
-		
+
     }
 
-    public static void main(String[] args) {
-		// Check if a file path is provided as an argument
-		if (args.length < 1) {
-			System.out.println("Please provide a file path with chess moves.");
-			return;
-		}
-	
-		// Read moves from the file
-		String filePath = args[0];
-		File moveFile = new File(filePath);
-	
-		if (!moveFile.exists()) {
-			System.out.println("The specified file does not exist.");
-			return;
-		}
-	
-		try (Scanner fileScanner = new Scanner(moveFile)) {
-			start(); // Initialize the board and set up the game
-	
-			while (fileScanner.hasNextLine()) {
-				String move = fileScanner.nextLine().trim();
-				
-				// Print current board before processing the move
 
-				System.out.println("Current board state:");
-				printBoard();
-				System.out.println(currentPlayer + "'s turn\n");
-	
-				// Process the move
-				if (move.equals("quit")) {
-					System.out.println("Game over. Thanks for playing!");
-					break;
-				}
-	
-				// If the user wants to resign
-				if (move.equals("resign")) {
-					ReturnPlay result = play(move);
-					System.out.println(result.message);  // Print resignation message
-					break;
-				}
-	
-				if (move.equals("reset")) {
-					start();  // Reset the board and game state
-					System.out.println("Game has been reset.");
-					continue; // Skip the rest of the loop
-				}
-	
-				// Process the move and display the result
-				ReturnPlay result = play(move);
-				System.out.println("player moved: " + move + "\n"); //           						 debug (just a reminder so i dont have to keep checking moves.txt)
-				if (result.message != null) {
-					System.out.println(result.message); // Print result message (check, checkmate, etc.)
-				}
-	
-				// Print the current board after each move
-				System.out.println("This is the current board output:");
-				printBoard();
-				System.out.println(currentPlayer + "'s turn\n");
-			}
-		} catch (FileNotFoundException e) {
-			System.out.println("Error reading the file: " + e.getMessage());
-		}
-	}
-	
 
 }
